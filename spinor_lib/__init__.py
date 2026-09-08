@@ -18,13 +18,75 @@ from .transformations import (
     global_phase,
     contract,
 )
-from .nn import SpinorLinear, SU2Rotation
+from .observables import (
+    pauli,
+    identity,
+    expectation,
+    density_matrix,
+    purity,
+    density_from_bloch,
+    bloch_vector,
+    from_bloch_vector,
+    fidelity,
+    fubini_study_distance,
+    slerp,
+)
+from .so3 import (
+    su2_to_so3,
+    so3_to_su2,
+    su2_to_quaternion,
+    quaternion_to_su2,
+    so3_to_quaternion,
+    slerp_su2,
+)
+from .composite import (
+    tensor_product,
+    kron,
+    embed_operator,
+    partial_trace,
+    reduced_density_matrix,
+    von_neumann_entropy,
+    entanglement_entropy,
+    concurrence,
+)
+from .lorentz import (
+    sigma_mu,
+    vector_to_matrix,
+    matrix_to_vector,
+    minkowski_inner,
+    minkowski_metric,
+    rapidity_from_velocity,
+    velocity_from_rapidity,
+    generate_boost,
+    generate_lorentz,
+    other_handedness,
+    sl2c_to_lorentz,
+    weyl_current,
+    gamma_matrices,
+    gamma5,
+    generate_dirac,
+    dirac_from_weyl,
+    weyl_from_dirac,
+    dirac_adjoint,
+    dirac_bilinear,
+    dirac_current,
+)
+from .equivariant import singlet, overlap, vector, apply_vector, gram, invariant_features
+from .nn import (
+    SpinorLinear,
+    SU2Rotation,
+    QuaternionRotation,
+    EquivariantLinear,
+    NormGate,
+    InvariantReadout,
+)
 from .utils import get_backend
 
-__version__ = "0.1.0"
+__version__ = "0.3.0"
 
 __all__ = [
     "Spinor",
+    # ops
     "add",
     "sub",
     "mul",
@@ -33,12 +95,74 @@ __all__ = [
     "norm",
     "normalize",
     "conjugate",
+    # transformations
     "generate_su2_rotation",
     "generate_su2_rotation_from_axis_angle",
     "rotate",
     "global_phase",
     "contract",
+    # observables / Bloch sphere / density matrices
+    "pauli",
+    "identity",
+    "expectation",
+    "density_matrix",
+    "purity",
+    "density_from_bloch",
+    "bloch_vector",
+    "from_bloch_vector",
+    "fidelity",
+    "fubini_study_distance",
+    "slerp",
+    # SU(2) <-> SO(3) <-> quaternions
+    "su2_to_so3",
+    "so3_to_su2",
+    "su2_to_quaternion",
+    "quaternion_to_su2",
+    "so3_to_quaternion",
+    "slerp_su2",
+    # composite states
+    "tensor_product",
+    "kron",
+    "embed_operator",
+    "partial_trace",
+    "reduced_density_matrix",
+    "von_neumann_entropy",
+    "entanglement_entropy",
+    "concurrence",
+    # Lorentz / Weyl / Dirac
+    "sigma_mu",
+    "vector_to_matrix",
+    "matrix_to_vector",
+    "minkowski_inner",
+    "minkowski_metric",
+    "rapidity_from_velocity",
+    "velocity_from_rapidity",
+    "generate_boost",
+    "generate_lorentz",
+    "other_handedness",
+    "sl2c_to_lorentz",
+    "weyl_current",
+    "gamma_matrices",
+    "gamma5",
+    "generate_dirac",
+    "dirac_from_weyl",
+    "weyl_from_dirac",
+    "dirac_adjoint",
+    "dirac_bilinear",
+    "dirac_current",
+    # equivariant building blocks
+    "singlet",
+    "overlap",
+    "vector",
+    "apply_vector",
+    "gram",
+    "invariant_features",
+    # nn
     "SpinorLinear",
     "SU2Rotation",
+    "QuaternionRotation",
+    "EquivariantLinear",
+    "NormGate",
+    "InvariantReadout",
     "get_backend",
 ]
