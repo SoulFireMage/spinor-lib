@@ -1,0 +1,62 @@
+Blocking issues
+
+1. The test suite is destroyed and collects with a SyntaxError.
+tests/test_spinor.py on disk is a 34-byte stub containing the bare line Unit tests for the Spinor library. (no quotes). python -m pytest fails at collection; zero tests run. The culprit is _create_test.py:
+open("tests/test_spinor.py", "w").write("""Unit tests for the Spinor library.""")
+This truncated a real 174-line suite (the 17 test IDs are still in .pytest_cache/v/cache/nodeids). Restore the suite from the pyc/history and delete _create_test.py — it's a footgun that clobbers the test file on every run.
+
+2. generate_su2_rotation produces the wrong matrix for any axis with a y-component. transformations.py:58-61
+The off-diagonal real parts are sign-flipped. Verified against torch.matrix_exp(-i·θ/2·n·σ) for axis (0.3,0.7,0.2), θ=1.1:
+max abs diff: 0.93          # code vs. reference
+code R01 =  0.4647-0.1991j   ref R01 = -0.4647-0.1991j
+code R10 = -0.4647-0.1991j   ref R10 =  0.4647-0.1991j
+Correct values are R01 = -s·nʸ - i·s·nˣ, R10 = +s·nʸ - i·s·nˣ (s = sin(θ/2)); the code swaps the nʸ sign on both. It's still unitary, so test_unitarity and test_rotation_invariance_of_norm pass — and every existing test uses axis [0,0,1], where nʸ=0 hides the bug entirely. The code's own comment at :44-45 also encodes the wrong convention.
+
+3. generate_su2_rotation_from_axis_angle always raises. transformations.py:74
+angle = norm(Spinor(axis_angle))   # axis_angle is a 3-vector
+Spinor.__init__ enforces last-dim == 2, so this is ValueError: Last dimension must be 2 for spinors, got 3 for every input. Exported in __init__.py, no test. Compute the norm directly (torch.linalg.vector_norm(axis_angle)).
+
+4. contract always raises NameError. transformations.py:111
+It calls inner_product(...), but the module only imports norm from .ops. Exported, untested. Also the indices argument is accepted and completely ignored, so it doesn't do what the spec's "specific index contractions" asks for.
+
+5. rotate crashes on any non-complex128 spinor. transformations.py:63 hardcodes the matrix to complex128; rotate then does matmul/mv with the spinor data. The spec's own example (torch.randn(32, 2, dtype=torch.complex64)) gives:
+RuntimeError: expected scalar type ComplexDouble but found ComplexFloat
+Cast the matrix to the spinor's dtype (or promote both) inside rotate.
+
+Correctness / API problems
+
+- No broadcasting, despite the spec explicitly requiring batch broadcasting. ops.py:11,18,33 use strict s1.data.shape != s2.data.shape checks, so add((32,2), (2,)) raises ValueError. Use torch.broadcast_shapes for validation, or just let torch broadcast.
+- norm returns a complex dtype for complex spinors (ops.py:50): torch.sqrt of the complex inner product. Norm is real by definition — take .real before the sqrt, or use torch.linalg.vector_norm. Right now the complex type propagates into normalize, into loss = s.norm()**2, and into every comparison.
+- Spinor.__init__ silently discards data. core.py:42-43: when data is a list/tuple and shape is given, it builds torch.zeros(shape) and throws the data away. When data is a tensor, shape is ignored entirely. Pick one contract and document it.
+- outer_product doesn't conjugate. ops.py:40-45 computes s1 ⊗ s2ᵀ. The conventional spinor outer product (density-matrix style, consistent with your inner_product = s1† s2) is s1 ⊗ s2†. At minimum document the convention.
+- __getitem__ re-validates. core.py:86-88: s[0] on a 1-D spinor, or s[..., 0], raises inside the returned Spinor(...). Indexing that changes the component axis should probably return a plain tensor.
+- normalize zero-guard is exact. ops.py:57 torch.where(n == 0, ...) — a norm of 1e-30 still explodes. Use a < eps threshold.
+- Minor: key: any should be typing.Any (core.py:86); get_backend is imported into core.py and never used; _dtype/_device are cached at construction and go stale if .data is reassigned; ensure_torch_tensor uses torch.from_numpy which aliases the ndarray's memory.
+
+Missing vs. spec
+
+- SpinorModule (spec §5/§6: "a simple Linear layer acting on spinors") — not implemented.
+- Backend detection (spec §6) — get_backend exists but is wired to nothing; the library is torch-only. Either implement a numpy path or drop the pretense and the numpy imports.
+- validate_spinor_dimension hardcodes dim=2 and Spinor gives no way to request N-component spinors, so the spec's "e.g., 2" isn't actually parameterizable.
+
+Testing gaps (once the file is restored)
+
+- Every rotation test uses [0,0,1] → the SU(2) sign bug slips through. Add a value assertion against torch.matrix_exp for a generic axis.
+- test_rotate only checks output shape, never values.
+- No tests at all for sub, outer_product, contract, generate_su2_rotation_from_axis_angle, normalize on a zero vector, Spinor(shape=...), numpy input, global_phase's actual phase (only its norm).
+- Autograd is only checked through inner_product, and only grad is not None. Nothing exercises grad through rotate, normalize, or generate_su2_rotation. test_gradient also passes only because Spinor happens to keep the same tensor object — it breaks silently if dtype/device kwargs are used.
+- sys.path.insert(0, '..') at test_spinor.py:6 is cwd-dependent; proper packaging (below) removes the need.
+
+Packaging / hygiene
+
+- Requirements.txt is the design doc, not a pip file — pip install -r Requirements.txt fails. Rename to SPEC.md/DESIGN.md.
+- No pyproject.toml/setup.py and no real dependency list (torch, numpy, pytest) for something billed as a library. It can't be installed; imports depend on cwd.
+- No README, no LICENSE, no __version__.
+- Not a git repo; .pytest_cache/ and __pycache__/ are lying around with no .gitignore. git init + a .gitignore would help.
+
+What's good
+
+- Module layout matches the spec cleanly; consistent docstrings and type hints.
+- rotate's batched path (matmul + unsqueeze/squeeze) is correct and tidy; batched norm shapes are right.
+- test_rotation_invariance_of_norm and test_unitarity are exactly the right properties to assert — they just need a non-trivial axis to have teeth.
+- No stray .detach() — autograd graph is preserved as the spec requires.
