@@ -25,6 +25,7 @@ sys.path.insert(0, ROOT)
 from demos.api import HANDLERS  # noqa: E402
 
 WEB_DIR = os.path.join(HERE, "web")
+MAX_BODY = 64 * 1024  # request bodies are a handful of numbers; refuse anything larger
 
 
 class DemoHandler(SimpleHTTPRequestHandler):
@@ -41,6 +42,9 @@ class DemoHandler(SimpleHTTPRequestHandler):
             return
         name = self.path[len("/api/"):].split("?", 1)[0]
         length = int(self.headers.get("Content-Length") or 0)
+        if length > MAX_BODY:
+            self.send_error(HTTPStatus.REQUEST_ENTITY_TOO_LARGE)
+            return
         try:
             params = json.loads(self.rfile.read(length) or b"{}")
             fn = HANDLERS.get(name)

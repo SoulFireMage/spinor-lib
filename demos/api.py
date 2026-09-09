@@ -70,6 +70,16 @@ def c2j(t: torch.Tensor):
     return torch.stack([t.real, t.imag], dim=-1).detach().cpu().tolist()
 
 
+def _int(p: dict, key: str, default: int, lo: int, hi: int) -> int:
+    """An integer parameter clamped to [lo, hi], so a public server cannot be
+    asked for a million stars or a hundred-thousand-sample sweep."""
+    try:
+        v = int(p.get(key, default))
+    except (TypeError, ValueError):
+        v = default
+    return max(lo, min(hi, v))
+
+
 def _vec3(v, default):
     v = torch.as_tensor(v if v is not None else default, dtype=REAL)
     if v.shape != (3,):
@@ -101,7 +111,7 @@ def rotation_sweep(p: dict) -> dict:
     """
     axis = _vec3(p.get("axis"), [0, 0, 1])
     max_angle = float(p.get("max_angle", 4 * math.pi))
-    n = int(p.get("samples", 721))
+    n = _int(p, "samples", 721, 2, 2001)
     psi0 = _state_from_params(p)
 
     angles = torch.linspace(0, max_angle, n, dtype=REAL)
@@ -128,8 +138,8 @@ def precession_sweep(p: dict) -> dict:
     call to ``generate_su2_rotation``.
     """
     axis = _vec3(p.get("axis"), [0, 0, 1])
-    n_spins = int(p.get("n_spins", 150))
-    n = int(p.get("samples", 241))
+    n_spins = _int(p, "n_spins", 150, 1, 500)
+    n = _int(p, "samples", 241, 2, 721)
     max_angle = float(p.get("max_angle", 4 * math.pi))
     g = torch.Generator().manual_seed(int(p.get("seed", 0)))
     psi0 = Spinor(torch.randn(n_spins, 2, dtype=COMPLEX, generator=g)).normalize()
@@ -168,7 +178,7 @@ def belt(p: dict) -> dict:
     """
     turns = float(p.get("turns", 2))
     t = float(p.get("t", 0.0))
-    n = int(p.get("segments", 96))
+    n = _int(p, "segments", 96, 4, 400)
 
     s = torch.linspace(0, 1, n, dtype=REAL)
     loop = generate_su2_rotation([0, 0, 1], 2 * math.pi * turns * s)  # [n, 2, 2]
@@ -250,7 +260,7 @@ def aberration(p: dict) -> dict:
     beta = float(p.get("beta", 0.0))
     beta = max(-0.999, min(0.999, beta))
     direction = _vec3(p.get("direction"), [0, 0, 1])
-    n_stars = int(p.get("n_stars", 1500))
+    n_stars = _int(p, "n_stars", 1500, 1, 5000)
     seed = int(p.get("seed", 1))
 
     eta = rapidity_from_velocity(torch.tensor(beta, dtype=REAL))
@@ -337,7 +347,7 @@ class _Session:
     def __init__(self, p: dict):
         seed = int(p.get("seed", 0))
         g = torch.Generator().manual_seed(seed)
-        n = int(p.get("n_points", 64))
+        n = _int(p, "n_points", 64, 4, 512)
         noise = float(p.get("noise", 0.02))
         lr = float(p.get("lr", 0.05))
 
@@ -409,5 +419,5 @@ def learn_step(p: dict) -> dict:
     sess = _SESSIONS.get(str(p.get("session", "")))
     if sess is None:
         raise KeyError("unknown or expired session; call learn_reset")
-    sess.train(max(1, min(int(p.get("steps", 1)), 200)))
+    sess.train(_int(p, "steps", 1, 1, 200))
     return sess.snapshot()
