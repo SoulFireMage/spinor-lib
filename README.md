@@ -9,6 +9,18 @@ pip install -e ".[test]"
 pytest
 ```
 
+## Interactive three.js demos
+
+```
+python demos/server.py        # then open http://localhost:8765
+```
+
+Five browser scenes driven live by the library through a tiny stdlib HTTP
+server: the Bloch sphere and the 720° double cover, Dirac's belt trick,
+relativistic aberration of the night sky, two-qubit entanglement, and a
+`QuaternionRotation` learning a hidden rotation one gradient step at a time.
+See `demos/README.md`.
+
 ## Usage
 
 ```python

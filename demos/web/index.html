@@ -1,0 +1,51 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>spinor-lib · three.js demos</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div class="home">
+  <h1>spinor-lib · three.js demos</h1>
+  <div class="sub">
+    Five interactive scenes. Every number on screen is computed by <code>spinor_lib</code> (PyTorch) in
+    <code>demos/api.py</code> and sent to the browser as JSON; three.js only draws. The list under each card
+    names the library functions doing the work.
+  </div>
+  <div class="cards">
+    <a class="card" href="bloch.html">
+      <h3>1 · Bloch sphere &amp; the double cover</h3>
+      <p>Rotate a spin-½ state about any axis and watch its Bloch arrow return after 360° while the spinor itself
+        comes back negated, needing 720°. Includes a Larmor-precession cloud of 150 spins.</p>
+      <code>generate_su2_rotation · rotate · bloch_vector · inner_product · su2_to_quaternion · su2_to_so3</code>
+    </a>
+    <a class="card" href="belt.html">
+      <h3>2 · Dirac's belt trick</h3>
+      <p>A belt twisted by 360° or 720°, untwisted by a homotopy computed on the unit quaternions. With two twists the
+        buckle never rotates; with one it is forced to flip over. The lifted path in SU(2) is shown alongside.</p>
+      <code>generate_su2_rotation · su2_to_quaternion · quaternion_to_su2 · su2_to_so3</code>
+    </a>
+    <a class="card" href="aberration.html">
+      <h3>3 · Relativistic aberration of the sky</h3>
+      <p>A boost is an SL(2,C) matrix acting on Weyl spinors. Apply it to 1500 stars and the sky grid: stars bunch up
+        ahead, blueshift, and circles stay circles. Fly at up to 0.99&nbsp;c.</p>
+      <code>generate_boost · rapidity_from_velocity · from_bloch_vector · weyl_current · sl2c_to_lorentz</code>
+    </a>
+    <a class="card" href="entangle.html">
+      <h3>4 · Two qubits: entanglement shrinks the arrows</h3>
+      <p>Build cos&nbsp;θ|00⟩ + sin&nbsp;θ|11⟩ with a rotation and a CNOT, then trace out each qubit. The reduced Bloch
+        vectors sink into the ball as concurrence rises; local rotations move them without changing entanglement.</p>
+      <code>tensor_product · embed_operator · reduced_density_matrix · concurrence · entanglement_entropy · purity</code>
+    </a>
+    <a class="card" href="learn.html">
+      <h3>5 · Learning a rotation live</h3>
+      <p>Watch <code>QuaternionRotation</code> recover a hidden SU(2) rotation from noisy before/after pairs by
+        gradient descent, one optimiser step at a time, with the loss curve and the learned frame converging.</p>
+      <code>QuaternionRotation · fidelity · autograd · Adam · su2_to_so3</code>
+    </a>
+  </div>
+</div>
+</body>
+</html>
